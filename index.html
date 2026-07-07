@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Markdown & PDF Notes</title>
+    <style>
+        /* === MATERIAL 3 EXPRESSIVE DARK THEME === */
+        :root {
+            --md-sys-color-background: #1A1C19;
+            --md-sys-color-on-background: #E2E3DD;
+            --md-sys-color-surface: #2A2C29; 
+            --md-sys-color-on-surface: #E2E3DD;
+            --md-sys-color-on-surface-variant: #C2C9BD; 
+            --md-sys-color-primary: #9CD67D; 
+            --md-sys-color-on-primary: #0C3900;
+            --md-sys-color-primary-container: #265108;
+            --md-sys-color-error: #FFB4AB; 
+            --md-sys-color-error-container: #93000A;
+            --md-sys-color-outline: #8C9388;
+            
+            --radius-large: 28px;
+            --radius-medium: 16px;
+            --spacing: 12px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--md-sys-color-background);
+            color: var(--md-sys-color-on-background);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: var(--spacing);
+        }
+
+        .app-container {
+            background-color: var(--md-sys-color-surface);
+            border-radius: var(--radius-large);
+            padding: 24px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid var(--md-sys-color-outline);
+        }
+
+        h1 { 
+            text-align: center; 
+            font-size: 24px; 
+            font-weight: 700; 
+            margin-top: 0;
+            margin-bottom: 24px; 
+            color: var(--md-sys-color-primary);
+        }
+
+        #toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .toolbar-btn, .toolbar-select {
+            background-color: var(--md-sys-color-background);
+            color: var(--md-sys-color-on-surface);
+            border: 1px solid var(--md-sys-color-outline);
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .toolbar-btn:hover {
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-primary);
+            border-color: var(--md-sys-color-primary-container);
+        }
+
+        .actions-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn { 
+            border: none; 
+            border-radius: 100px; 
+            font-weight: 600; 
+            font-size: 15px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 12px 24px;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .btn-primary { 
+            background-color: var(--md-sys-color-primary-container); 
+            color: var(--md-sys-color-primary); 
+        }
+        
+        .btn-surface { 
+            background-color: var(--md-sys-color-background); 
+            color: var(--md-sys-color-on-surface); 
+            border: 1px solid var(--md-sys-color-outline);
+        }
+        
+        .btn-error { 
+            background-color: var(--md-sys-color-error-container); 
+            color: var(--md-sys-color-error); 
+        }
+
+        #editor {
+            background-color: var(--md-sys-color-background);
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+            min-height: 250px;
+            color: var(--md-sys-color-on-background);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            overflow-y: auto;
+        }
+
+        #editor:focus {
+            outline: none;
+            border-color: var(--md-sys-color-primary);
+            box-shadow: 0 0 0 2px rgba(156, 214, 125, 0.2);
+        }
+
+        #editor mark { background-color: var(--md-sys-color-primary-container); color: var(--md-sys-color-primary); padding: 0.1rem 0.3rem; border-radius: 4px; }
+        #editor h1 { font-size: 2em; font-weight: bold; margin-bottom: 0.5em; color: var(--md-sys-color-on-surface); }
+        #editor h2 { font-size: 1.5em; font-weight: bold; margin-bottom: 0.5em; color: var(--md-sys-color-on-surface); }
+        #editor h3, #editor h4, #editor h5, #editor h6 { font-weight: bold; margin-bottom: 0.5em; color: var(--md-sys-color-on-surface); }
+        #editor ul, #editor ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        #editor blockquote { 
+            border-left: 4px solid var(--md-sys-color-primary); 
+            padding-left: 1rem; 
+            margin-bottom: 1rem; 
+            color: var(--md-sys-color-on-surface-variant); 
+            font-style: italic; 
+            background: rgba(156, 214, 125, 0.05);
+            padding: 0.5rem 0.5rem 0.5rem 1rem;
+            border-radius: 0 4px 4px 0;
+            page-break-inside: avoid;
+        }
+        #editor table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        #editor th, #editor td { border: 1px solid var(--md-sys-color-outline); padding: 8px; text-align: left; }
+        #editor th { background-color: var(--md-sys-color-surface); }
+        #editor code {
+            background-color: var(--md-sys-color-surface);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            color: var(--md-sys-color-primary);
+            border: 1px solid var(--md-sys-color-outline);
+        }
+        
+        #editor img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 8px 0;
+            display: block;
+            cursor: pointer;
+            transition: width 0.2s ease-in-out;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        #markdownOutput {
+            background-color: var(--md-sys-color-background);
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+            margin-top: 16px;
+            color: var(--md-sys-color-on-surface-variant);
+            font-family: monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .hidden { display: none !important; }
+
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(156, 214, 125, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--md-sys-color-primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    
+    <div class="app-container">
+        <h1>Rich Notes Editor</h1>
+        
+        <div id="toolbar">
+            <button class="toolbar-btn" style="font-weight: bold;" onmousedown="event.preventDefault(); document.execCommand('bold', false, null)">B</button>
+            <button class="toolbar-btn" style="font-style: italic;" onmousedown="event.preventDefault(); document.execCommand('italic', false, null)">I</button>
+            <button class="toolbar-btn" style="text-decoration: underline;" onmousedown="event.preventDefault(); document.execCommand('underline', false, null)">U</button>
+            
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.execCommand('formatBlock', false, 'blockquote')">Quote</button>
+            <button class="toolbar-btn" style="border-color: var(--md-sys-color-primary);" onmousedown="event.preventDefault(); document.execCommand('formatBlock', false, 'p')">Normal Text</button>
+
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); insertCode()">Code</button>
+            
+            <select id="headerSelect" class="toolbar-select" onchange="document.execCommand('formatBlock', false, this.value); this.selectedIndex=0;">
+                <option selected disabled>Header</option>
+                <option value="p">Paragraph</option>
+                <option value="h1">H1</option>
+                <option value="h2">H2</option>
+                <option value="h3">H3</option>
+            </select>
+            
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.execCommand('insertUnorderedList', false, null)">Bullets</button>
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.execCommand('insertOrderedList', false, null)">Numbers</button>
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); insertCheckbox()">Task</button>
+            
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.getElementById('imageInput').click()">Image</button>
+            <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+        </div>
+
+        <div id="editor" contenteditable="true"></div>
+        
+        <div class="actions-row">
+            <button class="btn btn-primary" onclick="generatePDF()">Export as PDF</button>
+            <button class="btn btn-surface" onclick="convertToMarkdown()">To Markdown</button>
+            <button id="copy-btn" class="btn btn-surface" onclick="copyToClipboard()">Copy</button>
+            <button class="btn btn-error" onclick="clearAll()">Clear</button>
+        </div>
+
+        <div id="spinner-wrapper" class="spinner-container hidden">
+            <div id="spinner" class="spinner"></div>
+        </div>
+        
+        <div id="markdownOutput" class="hidden"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.0.0/turndown.min.js"></script>
+    <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+        function insertCheckbox() {
+            const html = '<ul><li style="list-style-type: none;"><input type="checkbox" disabled> Task</li></ul><br>';
+            document.execCommand('insertHTML', false, html);
+        }
+
+        function insertCode() {
+            const selection = document.getSelection();
+            if(selection.rangeCount > 0 && selection.toString().length > 0) {
+                document.execCommand('insertHTML', false, '<code>' + selection.toString() + '</code>');
+            } else {
+                document.execCommand('insertHTML', false, '<code>code</code>');
+            }
+        }
+
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgHtml = `<br><img src="${e.target.result}" alt="Inserted Image" style="width: 100%;" /><br>`;
+                    document.execCommand('insertHTML', false, imgHtml);
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+            input.value = '';
+        }
+
+        // Tap-to-resize event listener for mobile
+        document.getElementById('editor').addEventListener('click', function(e) {
+            if (e.target.tagName === 'IMG') {
+                const currentWidth = e.target.style.width || '100%';
+                if (currentWidth === '100%') {
+                    e.target.style.width = '75%';
+                } else if (currentWidth === '75%') {
+                    e.target.style.width = '50%';
+                } else if (currentWidth === '50%') {
+                    e.target.style.width = '25%';
+                } else {
+                    e.target.style.width = '100%';
+                }
+            }
+        });
+
+        function generatePDF() {
+            const editorDiv = document.getElementById("editor");
+            const editorContent = editorDiv.innerHTML;
+            const rawText = editorDiv.innerText.trim();
+
+            if (!editorContent.trim() || editorContent === '<br>') {
+                alert("The editor is empty!");
+                return;
+            }
+
+            const spinner = document.getElementById("spinner-wrapper");
+            spinner.classList.remove("hidden");
+
+            // Build dynamic filename based on first ~25 characters
+            let fileNameBase = "Note";
+            if (rawText) {
+                fileNameBase = rawText.substring(0, 25).replace(/[^a-zA-Z0-9 \-]/g, "").trim().replace(/\s+/g, "_");
+            }
+            
+            // Append short timestamp to prevent rapid overwrites
+            const dateStr = new Date().toISOString().slice(0,10);
+            const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false }).replace(/:/g, '');
+            const finalFilename = `${fileNameBase}_${dateStr}_${timeStr}.pdf`;
+
+            const printContent = `
+                <div style="background-color: #FFFFFF; color: #000000; padding: 24px; font-family: system-ui, -apple-system, sans-serif;">
+                    ${editorContent}
+                </div>
+            `;
+
+            const opt = {
+                margin:       0.5,
+                filename:     finalFilename,
+                image:        { type: 'jpeg', quality: 0.95 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+                // Configures engine to push images entirely to the next page if they hit a break
+                pagebreak:    { mode: ['css', 'legacy'], avoid: ['img', 'tr', 'blockquote'] } 
+            };
+
+            html2pdf().set(opt).from(printContent).save().then(() => {
+                spinner.classList.add("hidden");
+            }).catch(err => {
+                console.error("PDF generation error:", err);
+                spinner.classList.add("hidden");
+                alert("An error occurred. Make sure browser privacy shields (like Brave's Lion icon) are disabled for this local page, as they block PDF rendering.");
+            });
+        }
+
+        function clearAll() {
+            if(confirm("Are you sure you want to clear the editor?")) {
+                document.getElementById('editor').innerHTML = '';
+                document.getElementById('markdownOutput').innerHTML = '';
+                document.getElementById('markdownOutput').classList.add('hidden');
+            }
+        }
+
+        async function copyToClipboard() {
+            const markdownOutput = document.getElementById("markdownOutput");
+            const textToCopy = markdownOutput.innerText;
+
+            if (!textToCopy) {
+                alert("Nothing to copy! Convert your text to markdown first.");
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                triggerCopySuccess();
+            } catch (err) {
+                console.error('Modern copy failed, trying fallback: ', err);
+                try {
+                    const tempTextArea = document.createElement("textarea");
+                    tempTextArea.value = textToCopy;
+                    document.body.appendChild(tempTextArea);
+                    tempTextArea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(tempTextArea);
+                    triggerCopySuccess();
+                } catch (fallbackErr) {
+                    alert("Failed to copy text. The image data might be too large for your device's clipboard.");
+                }
+            }
+        }
+
+        function triggerCopySuccess() {
+            const copyBtn = document.getElementById("copy-btn");
+            if (copyBtn) {
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = "Copied!";
+                setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
+            }
+        }
+
+        function convertToMarkdown() {
+            const editorContent = document.getElementById("editor").innerHTML;
+            
+            const turndownService = new TurndownService({
+                headingStyle: 'atx',
+                codeBlockStyle: 'fenced',
+                bulletListMarker: '-'
+            });
+            
+            const gfm = turndownPluginGfm.gfm;
+            turndownService.use(gfm);
+
+            const markdown = turndownService.turndown(editorContent);
+
+            const outputDiv = document.getElementById("markdownOutput");
+            outputDiv.innerHTML = markdown;
+            outputDiv.classList.remove("hidden");
+        }
+    </script>
+</body>
+</html>
