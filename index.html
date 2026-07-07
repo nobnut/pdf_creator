@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDF Creator</title>
+    <style>
+        :root {
+            --md-sys-color-background: #1A1C19;
+            --md-sys-color-on-background: #E2E3DD;
+            --md-sys-color-surface: #2A2C29; 
+            --md-sys-color-primary: #9CD67D; 
+            --md-sys-color-primary-container: #265108;
+            --md-sys-color-error: #93000A;
+            --md-sys-color-outline: #8C9388;
+            --radius-large: 28px;
+            --radius-medium: 16px;
+            --spacing: 12px;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, sans-serif; background-color: var(--md-sys-color-background); color: var(--md-sys-color-on-background); min-height: 100vh; display: flex; flex-direction: column; padding: var(--spacing); }
+        .app-container { background-color: var(--md-sys-color-surface); border-radius: var(--radius-large); padding: 24px; width: 100%; max-width: 800px; margin: 0 auto; border: 1px solid var(--md-sys-color-outline); }
+        h1 { text-align: center; color: var(--md-sys-color-primary); margin-top: 0; }
+        #toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .toolbar-btn, .toolbar-select { background-color: var(--md-sys-color-background); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); padding: 8px 16px; border-radius: 100px; }
+        #editor { background-color: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: var(--radius-medium); padding: 16px; min-height: 250px; overflow-y: auto; }
+        .actions-row { display: flex; gap: 12px; margin-top: 16px; }
+        .btn { border: none; border-radius: 100px; font-weight: 600; padding: 12px 24px; cursor: pointer; flex: 1; }
+        .btn-primary { background-color: var(--md-sys-color-primary-container); color: var(--md-sys-color-primary); }
+        .btn-error { background-color: var(--md-sys-color-error); color: #FFB4AB; }
+        .spinner-container { display: flex; justify-content: center; margin-top: 16px; }
+        .spinner { border: 4px solid rgba(156, 214, 125, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: var(--md-sys-color-primary); animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1>PDF Creator</h1>
+        <div id="toolbar">
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.execCommand('bold')">B</button>
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.execCommand('italic')">I</button>
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.execCommand('insertUnorderedList')">Bullets</button>
+            <button class="toolbar-btn" onmousedown="event.preventDefault(); document.getElementById('imageInput').click()">Image</button>
+            <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+        </div>
+        <div id="editor" contenteditable="true"></div>
+        <div class="actions-row">
+            <button class="btn btn-primary" onclick="generatePDF()">Export as PDF</button>
+            <button class="btn btn-error" onclick="document.getElementById('editor').innerHTML = ''">Clear</button>
+        </div>
+        <div id="spinner-wrapper" class="spinner-container" style="display:none"><div class="spinner"></div></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const canvas = document.createElement('canvas');
+                    const img = new Image();
+                    img.onload = function() {
+                        const scale = Math.min(800 / img.width, 1);
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        document.execCommand('insertHTML', false, `<br><img src="${canvas.toDataURL('image/jpeg', 0.7)}" style="width:100%"><br>`);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        function generatePDF() {
+            const editor = document.getElementById("editor");
+            if (!editor.innerHTML.trim()) return;
+            document.getElementById("spinner-wrapper").style.display = "flex";
+            const opt = { margin: 0.5, filename: `Note_${new Date().toISOString().slice(0,10)}.pdf`, html2canvas: { scale: 2 }, pagebreak: { avoid: ['img'] } };
+            html2pdf().set(opt).from(`<div style="padding:20px">${editor.innerHTML}</div>`).save().then(() => document.getElementById("spinner-wrapper").style.display = "none");
+        }
+    </script>
+</body>
+</html>
