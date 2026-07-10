@@ -166,25 +166,60 @@
             border-left-color: var(--md-sys-color-primary); animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        #pdfViewerWrapper {
+            background-color: var(--md-sys-color-background);
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pdf-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--md-sys-color-on-surface);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+.canvas-container {
+    width: 100%;
+    max-height: 60vh; /* Limits height so it doesn't take over the whole screen */
+    overflow: auto; /* Enables both horizontal and vertical panning */
+    background-color: #fff;
+    border-radius: 8px;
+    /* Removed 'display: flex' to ensure scrolling works from top-left */
+}
+
+#pdfCanvas {
+    /* Removed 'max-width: 100%' so the canvas can render at its true size */
+    display: block;
+    margin: 0 auto;
+}
+
     </style>
     <!-- Link to the manifest file -->
-<link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="./manifest.json">
 
-<!-- Register the Service Worker -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(registration => {
-          console.log('Service Worker registered successfully');
-        })
-        .catch(error => {
-          console.log('Service Worker registration failed:', error);
+    <!-- Register the Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(registration => {
+              console.log('Service Worker registered successfully');
+            })
+            .catch(error => {
+              console.log('Service Worker registration failed:', error);
+            });
         });
-    });
-  }
-</script>
-    
+      }
+    </script>
 </head>
 <body>
     
@@ -226,6 +261,10 @@
             <button class="btn btn-primary" onclick="generatePDF()">Export PDF</button>
             <button class="btn btn-surface" onclick="pasteMarkdown()">Paste MD</button>
             <button class="btn btn-surface" onclick="convertToMarkdown()">To MD</button>
+            <!-- New Open PDF Button -->
+            <button class="btn btn-surface" onclick="document.getElementById('pdfInput').click()">Open PDF</button>
+            <input type="file" id="pdfInput" accept="application/pdf" style="display:none" onchange="loadLocalPDF(this)">
+            
             <button id="copy-btn" class="btn btn-surface" onclick="copyToClipboard()">Copy</button>
             <button class="btn btn-error" onclick="clearAll()">Clear</button>
         </div>
@@ -236,12 +275,37 @@
         
         <div id="markdownOutput" class="hidden"></div>
     </div>
+    
+    <!-- PDF Viewer Container -->
+    <div id="pdfViewerWrapper" class="hidden">
+<div class="pdf-toolbar">
+    <button class="toolbar-btn" onclick="prevPage()">Prev</button>
+    
+    <!-- New Zoom Buttons -->
+    <button class="toolbar-btn" onclick="zoomOut()">-</button>
+    <span><span id="page_num"></span>/<span id="page_count"></span></span>
+    <button class="toolbar-btn" onclick="zoomIn()">+</button>
+    
+    <button class="toolbar-btn" onclick="nextPage()">Next</button>
+    <button class="toolbar-btn" style="border-color: var(--md-sys-color-error);" onclick="closePDFViewer()">Close</button>
+</div>
+        <div class="canvas-container">
+            <canvas id="pdfCanvas"></canvas>
+        </div>
+    </div>
 
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.0.0/turndown.min.js"></script>
     <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Set the worker source for PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
     
     <script>
         function insertCheckbox() {
@@ -513,6 +577,125 @@
                 document.getElementById('markdownOutput').classList.add('hidden');
             }
         }
+
+        // --- PDF Viewer Variables ---
+        let pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,
+            scale = 0.75, // Increase for better resolution on high DPI screens
+            canvas = document.getElementById('pdfCanvas'),
+            ctx = canvas.getContext('2d');
+
+        // --- Load Local PDF ---
+        function loadLocalPDF(input) {
+            const file = input.files[0];
+            if (file && file.type === 'application/pdf') {
+                const reader = new FileReader();
+                
+                // Show spinner while processing
+                document.getElementById("spinner-wrapper").classList.remove("hidden");
+                
+                reader.onload = function(e) {
+                    // PDF.js requires a Uint8Array
+                    const typedarray = new Uint8Array(e.target.result);
+                    
+                    // Parse the PDF
+                    pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
+                        pdfDoc = pdf;
+                        document.getElementById('page_count').textContent = pdf.numPages;
+                        
+                        // Show the viewer and hide spinner
+                        document.getElementById('pdfViewerWrapper').classList.remove('hidden');
+                        document.getElementById("spinner-wrapper").classList.add("hidden");
+                        
+                        // Render the first page
+                        pageNum = 1;
+                        renderPage(pageNum);
+                    }).catch(function(error) {
+                        console.error("Error loading PDF:", error);
+                        document.getElementById("spinner-wrapper").classList.add("hidden");
+                        alert("Failed to load the PDF.");
+                    });
+                };
+                
+                // Read file as an ArrayBuffer
+                reader.readAsArrayBuffer(file);
+            }
+            // Reset input so the same file can be loaded again if needed
+            input.value = ''; 
+        }
+
+        // --- Render a Specific Page ---
+        function renderPage(num) {
+            pageRendering = true;
+            
+            pdfDoc.getPage(num).then(function(page) {
+                const viewport = page.getViewport({ scale: scale });
+                
+                // Set canvas dimensions to match the PDF viewport
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                
+                const renderTask = page.render(renderContext);
+                
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+            
+            // Update page counters
+            document.getElementById('page_num').textContent = num;
+        }
+
+        // --- Pagination Functions ---
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        function prevPage() {
+            if (pageNum <= 1) return;
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+
+        function nextPage() {
+            if (pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+
+        // --- Close Viewer ---
+        function closePDFViewer() {
+            document.getElementById('pdfViewerWrapper').classList.add('hidden');
+            pdfDoc = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas memory
+        }
+// --- Zoom Functions ---
+function zoomIn() {
+    scale += 0.25; // Increase zoom level
+    queueRenderPage(pageNum);
+}
+
+function zoomOut() {
+    if (scale <= 0.5) return; // Prevent zooming out until it disappears
+    scale -= 0.25; // Decrease zoom level
+    queueRenderPage(pageNum);
+}
+
     </script>
 </body>
 </html>
